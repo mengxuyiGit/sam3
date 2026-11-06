@@ -1675,6 +1675,9 @@ class VideoTrackingMultiplexDemo(VideoTrackingDynamicMultiplex):
         """Add new mask to a frame."""
         if isinstance(obj_ids, np.ndarray):
             obj_ids = obj_ids.tolist()
+        has_new_objects = any(
+            obj_id not in inference_state["obj_id_to_idx"] for obj_id in obj_ids
+        )
         obj_idxs = [
             self._obj_id_to_idx(inference_state, obj_id, error_if_new=reconditioning)
             for obj_id in obj_ids
@@ -1759,7 +1762,10 @@ class VideoTrackingMultiplexDemo(VideoTrackingDynamicMultiplex):
         ]
         # Add a frame to conditioning output if it's an initial conditioning frame or
         # if the model sees all frames receiving clicks/mask as conditioning frames.
-        is_cond = is_init_cond_frame or self.add_all_frames_to_correct_as_cond
+        # A new object's first mask must survive removal of older objects' inputs.
+        is_cond = (
+            is_init_cond_frame or self.add_all_frames_to_correct_as_cond or has_new_objects
+        )
         storage_key = "cond_frame_outputs" if is_cond else "non_cond_frame_outputs"
 
         # Allow creating a new bucket only when existing buckets cannot fit the new objects
